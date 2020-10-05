@@ -1,0 +1,8 @@
+controller\Game.class
+handler\GameObject.class
+handler\GameMessageConstants.class
+handler\GameMessage.class
+handler\Room.class
+controller\Console.class
+handler\GameHandler.class
+socket\GameSocket.class
