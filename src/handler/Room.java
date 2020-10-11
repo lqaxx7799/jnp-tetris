@@ -49,7 +49,7 @@ public class Room {
 			this.consoleTwo = console;
 			return "";
 		}
-		return "full";
+		return "ROOM_FULL";
 	}
 
 	public void removeConsole(String consoleId) {

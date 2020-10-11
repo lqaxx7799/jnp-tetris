@@ -26,13 +26,38 @@ public class GameHandler {
 		rooms.put(id, new Room(new GameObject(id, gameSession)));
 	}
 
-	public static void removeRoom(String id) {
+	public static void removeRoom(String id) throws IOException {
+		Room room = rooms.get(id);
+		GameMessage gameMessage = new GameMessage(GameMessageConstants.GAME_REMOVE, null);
+		String message = new Gson().toJson(gameMessage);
+		if (room.getConsoleOne() != null) {
+			room.getConsoleOne().getSession().getBasicRemote().sendText(message);
+		}
+		if (room.getConsoleTwo() != null) {
+			room.getConsoleTwo().getSession().getBasicRemote().sendText(message);
+		}
 		rooms.remove(id);
 	}
 
 	public static void addConsoleToRoom(String roomId, String consoleId, Session consoleSession) throws IOException {
 		Room room = rooms.get(roomId);
-		room.registerConsole(new GameObject(consoleId, consoleSession));
+		if (room == null) {
+			Map<String, String> metaData = new LinkedHashMap<>();
+			metaData.put("error", "ROOM_NOT_EXIST");
+			GameMessage gameMessage = new GameMessage(GameMessageConstants.CONSOLE_REGISTED_TO_GAME_FAILED, metaData);
+			String message = new Gson().toJson(gameMessage);
+			consoleSession.getBasicRemote().sendText(message);
+			return;
+		}
+		String registerMessage = room.registerConsole(new GameObject(consoleId, consoleSession));
+		if (!registerMessage.equals("")) {
+			Map<String, String> metaData = new LinkedHashMap<>();
+			metaData.put("error", registerMessage);
+			GameMessage gameMessage = new GameMessage(GameMessageConstants.CONSOLE_REGISTED_TO_GAME_FAILED, metaData);
+			String message = new Gson().toJson(gameMessage);
+			consoleSession.getBasicRemote().sendText(message);
+			return;
+		}
 		rooms.replace(roomId, room);
 		Map<String, String> metaData = new LinkedHashMap<>();
 		metaData.put("consoleId", consoleId);
@@ -43,6 +68,9 @@ public class GameHandler {
 
 	public static void removeConsoleFromRoom(String roomId, String consoleId) throws IOException {
 		Room room = rooms.get(roomId);
+		if (room == null) {
+			return;
+		}
 		room.removeConsole(consoleId);
 		rooms.replace(roomId, room);
 		Map<String, String> metaData = new LinkedHashMap<>();
@@ -50,6 +78,12 @@ public class GameHandler {
 		GameMessage gameMessage = new GameMessage(GameMessageConstants.CONSOLE_REMOVE_FROM_GAME, metaData);
 		String message = new Gson().toJson(gameMessage);
 		room.getGame().getSession().getBasicRemote().sendText(message);
+		if (room.getConsoleOne() != null) {
+			room.getConsoleOne().getSession().getBasicRemote().sendText(message);
+		}
+		if (room.getConsoleTwo() != null) {
+			room.getConsoleTwo().getSession().getBasicRemote().sendText(message);
+		}
 	}
 
 	public static void sendMessageByGame(String message, String gameId) {
@@ -75,9 +109,11 @@ public class GameHandler {
 				if (room.getConsoleOne().getId().equals(consoleId)) {
 					System.out.println("Player 1: " + message);
 					room.getGame().getSession().getBasicRemote().sendText(message);
+					room.getConsoleTwo().getSession().getBasicRemote().sendText(message);
 				} else if (room.getConsoleTwo().getId().equals(consoleId)) {
 					System.out.println("Player 2: " + message);
 					room.getGame().getSession().getBasicRemote().sendText(message);
+					room.getConsoleOne().getSession().getBasicRemote().sendText(message);
 				}
 			}
 		} catch (IOException ex) {
